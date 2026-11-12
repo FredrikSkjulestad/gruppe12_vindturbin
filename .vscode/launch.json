@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "01_polars.py", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/01_polars.py", "cwd": "${workspaceFolder}", "console": "integratedTerminal" },
+    { "name": "02_design.py", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/02_design.py", "cwd": "${workspaceFolder}", "console": "integratedTerminal" },
+    { "name": "03_performance.py", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/03_performance.py", "cwd": "${workspaceFolder}", "console": "integratedTerminal" },
+    { "name": "04_report.py", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/04_report.py", "cwd": "${workspaceFolder}", "console": "integratedTerminal" },
+    { "name": "05_plots.py", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/05_plots.py", "cwd": "${workspaceFolder}", "console": "integratedTerminal" },
+    { "name": "validation/validate_goe227.py", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/validation/validate_goe227.py", "cwd": "${workspaceFolder}", "console": "integratedTerminal" }
+  ]
+}
+

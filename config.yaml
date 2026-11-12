@@ -1,0 +1,85 @@
+# TEP4175 wind_blade: all parameters in one place.
+# Paths are relative to this file's folder.
+
+paths:
+  xfoil: bin/xfoil.exe                # Windows: put xfoil.exe here (see README). Linux/Mac: e.g. /usr/local/bin/xfoil
+  airfoils: airfoils            # original .dat files + SOURCES.csv
+  results: results_lambda54     # lambda 5.4 study (2026-10-02). The lambda sweep (results/) uses config_sweep.yaml
+  cache: cache                  # XFOIL polars are cached here, keyed by the settings below
+
+# ---------------------------------------------------------------- fixed design parameters
+rotor:
+  Z: 2                # number of blades
+  V1: 12.0            # design wind speed [m/s]
+  R: 0.45             # rotor radius [m]
+  r_hub: 0.03         # hub radius [m]
+  N: 15               # blade elements, centres at r_i = (i - 1/2) dr (note: N = 15 puts one centre at r/R = 0.700)
+  rho: 1.2            # [kg/m3]
+  mu: 1.47e-5         # [kg/(m s)] value given in Assignment 3, Table 2
+
+# ---------------------------------------------------------------- constraints (Assignment 4, Table 4)
+constraints:
+  chord_min: 0.040    # [m]
+  chord_max: 0.100    # [m]
+  t_min: 0.005        # [m] absolute max thickness
+
+# realistic blade (Assignment 4, Table 3)
+realistic:
+  cyl_diameter: 0.048 # [m] cylinder section at r = r_hub, twist 0
+  cyl_CL: 0.0         # cylinder lift coefficient (assumption)
+  cyl_CD: 1.2         # cylinder drag coefficient (assumption)
+
+# ---------------------------------------------------------------- airfoils
+# lambda 5.4 study: the top 5 from the NeuralFoil screening (screening/), checked here with XFOIL.
+# The earlier lambda sweep (20 airfoils, results in results/) is in config_sweep.yaml.
+airfoils:
+  - mh114
+  - e396
+  - goe497
+  - e397
+  - goe501
+
+# ---------------------------------------------------------------- Step 2: polars
+xfoil:
+  ncrit: 5
+  re_list: [50000, 65000, 80000, 100000, 125000, 150000, 175000, 200000, 250000, 300000, 400000]
+  alpha_min: -5.0
+  alpha_max: 20.0
+  alpha_step: 0.5
+  iter: 150
+  n_panels: 200       # PPAR N (XFOIL repanels the .dat)
+  timeout_s: 60       # per XFOIL call (one Re, one sweep direction)
+  workers: 4          # parallel XFOIL processes
+  retry_half_step: true   # redo a sweep with half the step if it stops > 1 deg early (XFOIL hang), e.g. goe501 Re 300k
+viterna:
+  aspect_ratio: 8.4   # blade length / mean chord, gives CD_max = 1.11 + 0.018 AR (Viterna and Corrigan 1982)
+  neg_cl_factor: 0.7  # CL on the back side (90..180 deg) scaled by this, as in AirfoilPrep / QBlade
+  grid_step: 0.25     # [deg] resolution of the 360 deg tables
+reliability:
+  gap_deg: 1.0        # a missing stretch longer than this within +-3 deg of alpha_opt flags the polar
+  jump_dcl: 0.12      # |dCL| between neighbouring 0.5 deg points before CL_max flags a bubble jump
+  min_conv: 0.8       # converged fraction below this flags the polar
+
+# ---------------------------------------------------------------- Step 3: design
+design:
+  lambdas: [5.4]                 # fixed by the generator RPM (group decision). Earlier sweep: [5.0, 5.25, ..., 6.5]
+  alpha_offsets_step: 0.5        # alpha_des = alpha_opt + offset
+  alpha_offset_max: 2.0          # offsets +2.0, +1.5, ..., -4.0 are all designed and analysed
+  alpha_offset_min: -4.0         # remove these two lines to go back to: offset 0, -0.5, ... until the ld_drop stop
+  ld_drop: 0.10                  # (only used without alpha_offset_min) stop when CL/CD < (1 - ld_drop) * max
+  chord_first: 0.050             # [m] first chord guess at r/R = 0.7 (Assignment 3, Table 2: 40-60 mm)
+  re_tol: 30000                  # Assignment 3 / method note
+  re_maxiter: 30
+
+# ---------------------------------------------------------------- Step 4: performance
+performance:
+  lambda_min: 2.0
+  lambda_max: 10.0
+  lambda_step: 0.1
+  n_panels: 40                   # BEM panels between r_hub and R (cosine spaced, like QBlade)
+  relax: 0.3
+  tol: 1.0e-6
+  maxiter: 400
+  plateau_frac: 0.95             # plateau = lambda range where Cp >= 0.95 Cp_max
+  rank_by: Cp_at_lam_des_TL      # Cp at lambda_des with tip loss (lambda is fixed by the generator).
+                                 # Use Cp_max_TL to rank by the best Cp anywhere on the curve (earlier sweep).

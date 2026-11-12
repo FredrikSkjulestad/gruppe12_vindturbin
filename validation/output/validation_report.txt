@@ -1,0 +1,9 @@
+(a) Assignment 3 reproduction (QBlade polars)
+  Re history      : 208,290 -> 145,160 -> 136,621
+  alpha_opt       : 6.00 deg   (ref 6.00)
+  CL, CD          : 1.4770, 0.0207   (ref 1.4770, 0.0207)
+  Cp, CT          : 0.5245, 0.8847   (ref 0.5245, 0.8847)
+  max |chord err| : 0.00 mm
+  max |twist err| : 0.00 deg
+(b) no tip loss      : this code Cp_max 0.487 @ 5.5   QBlade 0.480 @ 5.4
+(b) Prandtl tip loss : this code Cp_max 0.436 @ 5.6   QBlade 0.427 @ 5.6

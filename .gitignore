@@ -1,0 +1,17 @@
+# Python environment and caches (rebuilt from requirements.txt, see README section 2)
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# XFOIL and NeuralFoil polar caches (rebuilt on the first run)
+cache/
+screening/results/polars/
+
+# Third-party binary: download XFOIL 6.99 yourself (README section 3)
+bin/xfoil.exe
+
+# Local only: backups and leftovers, not part of the study
+results_cloud_reference/
+results_lambda54.zip
+Results.txt

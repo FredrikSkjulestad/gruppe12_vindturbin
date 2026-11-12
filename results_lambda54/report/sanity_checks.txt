@@ -1,0 +1,17 @@
+SANITY CHECKS
+XFOIL convergence rate          : 98.4% over 55 polars (1 flagged, see 01_polars_summary.csv)
+Cp below Betz (16/27) everywhere: True  (max Cp_max without tip loss 0.533)
+Design a outboard (r/R > 0.3)   : 0.328 .. 0.332  (expect about 1/3)
+Design CT (Assignment 3 method) : 0.884 .. 0.884  (expect about 8/9)
+BEM residual > 1e-4             : 0 of 65 designs
+
+WINNER mh114__L5.40__A-1.0
+  Cp at λ_des 5.4: 0.4529 with tip loss (CT 0.827), 0.5317 without
+  Cp_max 0.4532 at λ 5.5 with tip loss; 0.5324 at λ 5.2 without
+  α_opt 4.50°, α_des 3.50°, CL 1.168, CL/CD 85.3, Re_des 191,438
+  local Re at the operating point : 108,096 .. 218,988 (polar grid 50,000 .. 400,000; 0% of panels outside)
+  rotational / axial term in W    : 5.9 at r/R = 0.7, 1.1 at the innermost airfoil panel
+  clamped elements                : 5 of 14 (2 raised to 40 mm, 3 cut to 100 mm), max change 21.8 mm
+  thinnest section                : 5.22 mm (limit 5 mm)
+
+Earlier GOE 227 blade in QBlade (Assignment 4): Cp_max 0.427 at λ 5.6 with tip loss
