@@ -1,0 +1,10 @@
+# Store text files with LF and check them out with the native line ending, so files that the
+# scripts rewrite on Windows (CRLF) do not show up as changed after reproduce.bat.
+* text=auto
+
+# binary files
+*.png binary
+*.pdf binary
+*.qpr binary
+*.zip binary
+*.exe binary
