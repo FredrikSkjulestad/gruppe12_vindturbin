@@ -16,15 +16,20 @@ Per airfoil:
 Each airfoil keeps the offset with the highest Cp at lambda_des with tip loss among designs that meet
 all constraints; airfoils are then ranked by that Cp (ties by CL/CD), as in 03_performance.py.
 
-Run from the wind_blade folder (needs: pip install aerosandbox==4.2.10 neuralfoil==0.3.3):
-    .venv\\Scripts\\python screening\\00_screen.py
-Reads : config.yaml, screening/foil_list_676.csv
-Writes: screening/results/screen_designs.csv   every design (airfoil x offset)
-        screening/results/screen_ranking.csv   best design per airfoil, ranked
-        screening/results/polars/<name>.csv    NeuralFoil polars (cache; delete to recompute)
+Run from the repository folder (needs: pip install aerosandbox==4.2.10 neuralfoil==0.3.3):
+    .venv\\Scripts\\python screening\\00_screen.py                      the 676 list (foil_list_676.txt)
+    .venv\\Scripts\\python screening\\00_screen.py --list my_list.txt   any other list (formats: parse_list.py)
+    .venv\\Scripts\\python screening\\00_screen.py --list my_list.txt --out screening\\results_test
+Reads : config.yaml, the candidate list (default screening/foil_list_676.txt)
+Writes: <out>/candidates.csv               the list as read (name, t/c, ...)
+        <out>/screen_designs.csv           every design (airfoil x offset)
+        <out>/screen_ranking.csv           best design per airfoil, ranked
+        screening/results/polars/<name>.csv  NeuralFoil polars, shared cache for every list (delete to recompute)
+<out> is screening/results unless --out is given.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 import time
@@ -36,11 +41,14 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
+sys.path.insert(0, str(HERE))
 import bem  # noqa: E402
+from parse_list import read_list  # noqa: E402
 
 # ---------------------------------------------------------------- screening settings
-LIST_FILE = HERE / "foil_list_676.csv"
-OUT = HERE / "results"
+LIST_FILE = HERE / "foil_list_676.txt"                 # default list; --list overrides it
+OUT = HERE / "results"                                 # default output; --out overrides it
+POLARS = HERE / "results" / "polars"                   # NeuralFoil cache, shared by all lists
 NCRIT = 5
 MODEL_SIZE = "large"                                   # NeuralFoil default; reproduces the list values
 RE_LIST = np.arange(60_000, 320_001, 20_000)           # 60k .. 320k
@@ -50,7 +58,7 @@ WORKERS = min(8, os.cpu_count() or 4)
 
 def neuralfoil_polars(name: str) -> dict:
     """Re -> DataFrame(alpha, CL, CD), cached as one CSV per airfoil."""
-    f = OUT / "polars" / f"{name}.csv"
+    f = POLARS / f"{name}.csv"
     if f.exists():
         df = pd.read_csv(f)
     else:
@@ -113,8 +121,19 @@ def screen_airfoil(args) -> list[dict]:
 
 
 def main():
-    (OUT / "polars").mkdir(parents=True, exist_ok=True)
-    foils = pd.read_csv(LIST_FILE)
+    ap = argparse.ArgumentParser(description="NeuralFoil screening of a list of UIUC airfoils")
+    ap.add_argument("--list", type=Path, default=LIST_FILE, help="candidate list (.txt or .csv, see parse_list.py)")
+    ap.add_argument("--out", type=Path, default=OUT, help="output folder (default screening/results)")
+    args = ap.parse_args()
+    out = args.out
+    out.mkdir(parents=True, exist_ok=True)
+    POLARS.mkdir(parents=True, exist_ok=True)
+    try:
+        foils = read_list(args.list)
+    except ValueError as e:
+        sys.exit(f"Problem with the list {args.list}: {e}")
+    foils.to_csv(out / "candidates.csv", index=False)
+    print(f"{len(foils)} airfoils from {args.list}  ->  results in {out}", flush=True)
     jobs = [(r.name, r.tc / 100) for r in foils.itertuples()]
     t0, rows = time.time(), []
     with ProcessPoolExecutor(WORKERS) as ex:
@@ -123,15 +142,17 @@ def main():
             if k % 50 == 0 or k == len(jobs):
                 print(f"{k}/{len(jobs)} airfoils  ({time.time() - t0:.0f} s)", flush=True)
     df = pd.DataFrame(rows)
-    df.to_csv(OUT / "screen_designs.csv", index=False)
+    df.to_csv(out / "screen_designs.csv", index=False)
 
     ok = df[df.constraints_ok]
     best = (ok.sort_values(["Cp_at_lam_des_TL", "CL_CD"], ascending=False)
               .groupby("airfoil", sort=False).head(1).reset_index(drop=True))
     best.insert(0, "rank", np.arange(1, len(best) + 1))
-    best = best.merge(foils[["name", "list_lambda", "LDmax"]].rename(columns={"name": "airfoil",
-                      "LDmax": "LDmax_list"}), on="airfoil", how="left")
-    best.to_csv(OUT / "screen_ranking.csv", index=False)
+    extra = [c for c in ("list_lambda", "LDmax") if c in foils]           # only in the NeuralFoil list format
+    if extra:
+        best = best.merge(foils[["name"] + extra].rename(columns={"name": "airfoil", "LDmax": "LDmax_list"}),
+                          on="airfoil", how="left")
+    best.to_csv(out / "screen_ranking.csv", index=False)
     print(f"{len(df)} designs, {len(ok)} meet all constraints, {len(best)} airfoils ranked")
     print(best.head(20)[["rank", "airfoil", "tc_pct", "alpha_opt", "alpha_des", "CL", "CL_CD",
                          "Cp_at_lam_des_TL", "lam_Cp_max_TL", "n_clamped_min", "n_clamped_max",

@@ -1,10 +1,12 @@
 """Figures for the report from the NeuralFoil screening (run after 00_screen.py).
+Use --out <folder> to plot a screening that was run with --out.
 
 Reads : screening/results/screen_designs.csv, screen_ranking.csv
 Writes: screening/results/fig_screen_top20.png      best Cp at lambda 5.4 per airfoil, top 20
         screening/results/fig_screen_distribution.png  best Cp of all ranked airfoils
         screening/results/fig_screen_heatmap.png    Cp vs alpha offset, top 15
 """
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -12,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-RES = HERE / "results"
+RES = Path(sys.argv[sys.argv.index("--out") + 1]) if "--out" in sys.argv else HERE / "results"
 TOP, REF = "#2a78d6", "#eb6834"          # top 5 / e68 reference
 GREY, INK, MUTED = "#a8a7a1", "#0b0b0b", "#52514e"
 plt.rcParams.update({"font.size": 10, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
@@ -51,9 +53,9 @@ cp = rank.Cp_at_lam_des_TL
 lo = 0.40
 n_out = int((cp < lo).sum())
 ax.hist(cp[cp >= lo], bins=np.arange(lo, cp.max() + 0.002, 0.002), color=GREY, edgecolor="white", linewidth=1)
-cut = rank.Cp_at_lam_des_TL.iloc[4]
+cut = rank.Cp_at_lam_des_TL.iloc[min(4, len(rank) - 1)]                # 5th best (or the last, for short lists)
 ax.axvline(cut, color=TOP, lw=1.5)
-ax.annotate(f"top 5: $C_p \\geq$ {cut:.4f}", xy=(cut, ax.get_ylim()[1] * 0.85), xytext=(0.418, ax.get_ylim()[1] * 0.85),
+ax.annotate(f"top {min(5, len(rank))}: $C_p \\geq$ {cut:.4f}", xy=(cut, ax.get_ylim()[1] * 0.85), xytext=(0.418, ax.get_ylim()[1] * 0.85),
             va="center", fontsize=8.5, color=INK, arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
 ax.set_xlim(lo, 0.458)
 ax.set_xlabel(f"Best $C_p$ at $\\lambda$ = {lam:g} with tip loss")

@@ -1,6 +1,6 @@
-# wind_blade
+# gruppe12_vindturbin
 
-Blade design code for the TEP4175 group project (NTNU, fall 2026). It finds the airfoil, design tip speed ratio (λ_des) and design angle of attack (α_des) that give the highest realistic C_P under the production constraints: chord 40 to 100 mm, t_max ≥ 5 mm, Z = 2, R = 0.45 m, r_hub = 0.03 m.
+Scripts (written with AI assistance) that group 12 used to find the best blade for a given tip speed ratio from the UIUC airfoil coordinates database. Blade design code for the TEP4175 group project (NTNU, fall 2026). It finds the airfoil, design tip speed ratio (λ_des) and design angle of attack (α_des) that give the highest realistic C_P under the production constraints: chord 40 to 100 mm, t_max ≥ 5 mm, Z = 2, R = 0.45 m, r_hub = 0.03 m.
 
 This repository holds one of the two blade models in the group report (the Python/XFOIL model). The other subgroup's model is not included.
 
@@ -8,13 +8,22 @@ This repository holds one of the two blade models in the group report (the Pytho
 
 | Report content | Code | Settings | Output |
 |---|---|---|---|
-| Airfoil screening at λ 5.4 (676 candidates, NeuralFoil) | `screening/00_screen.py`, `screening/plot_screen.py` | `config.yaml` (design and BEM) + settings in `screening/README.md` | `screening/results/` |
+| Airfoil screening at λ 5.4 (676 candidates, NeuralFoil) | `screening/00_screen.py`, `screening/plot_screen.py` | `screening/foil_list_676.txt` (candidate list), `config.yaml` (design and BEM) | `screening/results/` |
 | XFOIL check of the top 5 at λ 5.4, final blade (mh114) | `run_all.bat` (steps 01 to 05) | `config.yaml` | `results_lambda54/` |
 | Earlier λ sweep 5.0 to 6.5, 20 airfoils (best: e68 at λ 6.5) | `run_sweep.bat` (steps 01 to 05) | `config_sweep.yaml` | `results/` |
 | Code verification against Assignments 3 and 4 | `validation/validate_goe227.py` | `config.yaml` (rotor only) | `validation/output/` |
 | QBlade cross-check | QBlade CE 2.0.9.7, by hand | blade and polars from `results_lambda54/report/winner/` | `qblade/` |
 
 The key numbers for the final blade are in `results_lambda54/report/sanity_checks.txt`. The method follows the method note `docs/BEM_metodenotat.pdf`; `bem.py` tags each equation with its source.
+
+## 0. Get the code
+
+```powershell
+git clone https://github.com/FredrikSkjulestad/gruppe12_vindturbin.git
+cd gruppe12_vindturbin
+```
+
+All commands below are run from this folder.
 
 ## 1. Install Python (Windows, winget)
 
@@ -58,7 +67,8 @@ Every XFOIL call has a timeout (`xfoil.timeout_s`), so one hanging case cannot s
 |---|---|---|---|
 | λ 5.4 study (final blade) | double click `run_all.bat` | `config.yaml` | `results_lambda54/` |
 | Earlier λ sweep | double click `run_sweep.bat` | `config_sweep.yaml` | `results/` |
-| Screening | `.venv\Scripts\python screening\00_screen.py` then `screening\plot_screen.py` | see `screening/README.md` | `screening/results/` |
+| Screening (676 list) | `.venv\Scripts\python screening\00_screen.py` then `screening\plot_screen.py` | `screening/foil_list_676.txt` + `config.yaml` | `screening/results/` |
+| Screening (your own list) | `.venv\Scripts\python screening\00_screen.py --list my_list.txt --out screening\results_my_list` | see `screening/README.md` | the `--out` folder |
 | Code check | `.venv\Scripts\python validation\validate_goe227.py` | | `validation/output/` |
 
 Both batch files run the same five scripts. `run_sweep.bat` only sets the environment variable `WIND_BLADE_CONFIG=config_sweep.yaml` first; `bem.load_config()` reads that file instead of `config.yaml`. To run a single step of the sweep by hand:
@@ -123,7 +133,7 @@ Each step reads the CSV output of the step before, so any step can be rerun on i
 ## 7. Folder
 
 ```
-wind_blade/
+gruppe12_vindturbin/
   config.yaml            λ 5.4 study: all parameters, airfoil list, path to xfoil.exe
   config_sweep.yaml      earlier λ sweep (same file, lines marked SWEEP differ)
   run_all.bat            λ 5.4 study, steps 01 to 05
