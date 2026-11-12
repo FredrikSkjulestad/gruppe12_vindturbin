@@ -1,0 +1,3 @@
+# Only needed for explore.ipynb (not for reproduce.py). Install after requirements.txt.
+notebook==7.4.2
+ipykernel==6.29.5

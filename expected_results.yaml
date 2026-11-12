@@ -1,0 +1,29 @@
+_note: Result of reproduce.py on Windows, XFOIL 6.99 (bin/xfoil.exe), the run used
+  in the report.
+candidates: 676
+candidates_same_as_original_list: true
+screening_top5:
+- mh114
+- e396
+- e397
+- goe497
+- goe501
+screening_Cp_top5:
+- 0.453
+- 0.4527
+- 0.4518
+- 0.4517
+- 0.4517
+xfoil_order:
+- mh114
+- e396
+- e397
+- goe497
+- goe501
+winner: mh114__L5.40__A-1.0
+winner_alpha_des: 3.5
+winner_Cp_at_5.4: 0.453
+winner_Cp_max: 0.4532
+winner_lambda_Cp_max: 5.5
+winner_CL: 1.172
+winner_t_min_mm: 5.22

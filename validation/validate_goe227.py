@@ -22,7 +22,7 @@ sys.path.insert(0, str(HERE.parent))
 import bem
 from xfoil_runner import _read_pol
 
-cfg = bem.load_config()
+cfg = bem.load_config(resolve_airfoils=False)
 out = HERE / "output"; out.mkdir(exist_ok=True)
 
 # ---------------------------------------------------------------- (a) Assignment 3

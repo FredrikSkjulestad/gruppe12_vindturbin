@@ -31,13 +31,13 @@ realistic:
 
 # ---------------------------------------------------------------- airfoils
 # lambda 5.4 study: the top 5 from the NeuralFoil screening (screening/), checked here with XFOIL.
+# The names are read from the screening ranking, so run the screening first (reproduce.bat does it).
+# For the report run this gives mh114, e396, e397, goe497, goe501. To check your own choice instead,
+# replace the two lines below by a list, e.g.  airfoils: [mh114, e396]
 # The earlier lambda sweep (20 airfoils, results in results/) is in config_sweep.yaml.
 airfoils:
-  - mh114
-  - e396
-  - goe497
-  - e397
-  - goe501
+  from_screening: screening/results/screen_ranking.csv
+  top: 5
 
 # ---------------------------------------------------------------- Step 2: polars
 xfoil:

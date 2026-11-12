@@ -17,10 +17,10 @@ Each airfoil keeps the offset with the highest Cp at lambda_des with tip loss am
 all constraints; airfoils are then ranked by that Cp (ties by CL/CD), as in 03_performance.py.
 
 Run from the repository folder (needs: pip install aerosandbox==4.2.10 neuralfoil==0.3.3):
-    .venv\\Scripts\\python screening\\00_screen.py                      the 676 list (foil_list_676.txt)
+    .venv\\Scripts\\python screening\\00_screen.py                      the list from 00_build_list.py
     .venv\\Scripts\\python screening\\00_screen.py --list my_list.txt   any other list (formats: parse_list.py)
     .venv\\Scripts\\python screening\\00_screen.py --list my_list.txt --out screening\\results_test
-Reads : config.yaml, the candidate list (default screening/foil_list_676.txt)
+Reads : config.yaml, the candidate list (default screening/results/candidates_uiuc.txt from 00_build_list.py)
 Writes: <out>/candidates.csv               the list as read (name, t/c, ...)
         <out>/screen_designs.csv           every design (airfoil x offset)
         <out>/screen_ranking.csv           best design per airfoil, ranked
@@ -46,7 +46,7 @@ import bem  # noqa: E402
 from parse_list import read_list  # noqa: E402
 
 # ---------------------------------------------------------------- screening settings
-LIST_FILE = HERE / "foil_list_676.txt"                 # default list; --list overrides it
+LIST_FILE = HERE / "results" / "candidates_uiuc.txt"   # made by 00_build_list.py; --list overrides it
 OUT = HERE / "results"                                 # default output; --out overrides it
 POLARS = HERE / "results" / "polars"                   # NeuralFoil cache, shared by all lists
 NCRIT = 5
@@ -92,7 +92,7 @@ class NFPolarSet(bem.PolarSet):
 def screen_airfoil(args) -> list[dict]:
     import aerosandbox as asb
     name, tc = args
-    cfg = bem.load_config()
+    cfg = bem.load_config(resolve_airfoils=False)
     dcfg, pf = cfg["design"], cfg["performance"]
     pol = NFPolarSet.from_raw(name, neuralfoil_polars(name), cfg)
     pol._af, pol._cache = asb.Airfoil(name), {}
@@ -128,6 +128,8 @@ def main():
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     POLARS.mkdir(parents=True, exist_ok=True)
+    if not args.list.exists():
+        sys.exit(f"{args.list} not found. Run screening/00_build_list.py first, or give a list with --list.")
     try:
         foils = read_list(args.list)
     except ValueError as e:

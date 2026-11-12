@@ -4,12 +4,34 @@ Scripts (written with AI assistance) that group 12 used to find the best blade f
 
 This repository holds one of the two blade models in the group report (the Python/XFOIL model). The other subgroup's model is not included.
 
+## Reproduce the result (one click)
+
+On Windows with Python 3.12 or 3.13 installed:
+
+```powershell
+git clone https://github.com/FredrikSkjulestad/gruppe12_vindturbin.git
+cd gruppe12_vindturbin
+.\reproduce.bat
+```
+
+(or download the ZIP from GitHub, unzip, and double click `reproduce.bat`). The first run needs internet: it creates `.venv`, installs the pinned packages from `requirements.txt` and downloads XFOIL 6.99 from MIT (checked against its SHA256). It then runs the whole chain, about 10 to 15 minutes:
+
+1. **Candidate list** from the UIUC airfoil database (the 2174 airfoils bundled with AeroSandbox 4.2.10): thickness and tip chord filter → 676 airfoils (`screening/00_build_list.py`)
+2. **Screening** of all 676 with NeuralFoil polars and the same BEM design and analysis as the XFOIL study → ranking at λ 5.4 (`screening/00_screen.py`)
+3. **XFOIL check** of the top 5 from the screening → final blade (`01_polars.py` to `05_plots.py`)
+4. **Code check** against Assignments 3 and 4 (`validation/validate_goe227.py`)
+
+At the end it compares the result with `expected_results.yaml` (the numbers in the report) and prints `RESULT: same result as the report.` Nothing in the chain is chosen by hand: the list, the top 5 and the winner all come out of the code. On Linux or Mac, run `python3 reproduce.py` with XFOIL 6.99 on the PATH; expect differences of about 0.001 in C_P, because XFOIL builds differ.
+
+`python reproduce.py --sweep` also reruns the earlier λ sweep; `--clean-cache` recomputes every polar.
+
 ## Where the report numbers come from
 
 | Report content | Code | Settings | Output |
 |---|---|---|---|
-| Airfoil screening at λ 5.4 (676 candidates, NeuralFoil) | `screening/00_screen.py`, `screening/plot_screen.py` | `screening/foil_list_676.txt` (candidate list), `config.yaml` (design and BEM) | `screening/results/` |
-| XFOIL check of the top 5 at λ 5.4, final blade (mh114) | `run_all.bat` (steps 01 to 05) | `config.yaml` | `results_lambda54/` |
+| Candidate list from the UIUC database (676 airfoils) | `screening/00_build_list.py` | settings at the top of the script | `screening/results/candidates_uiuc.txt` |
+| Airfoil screening at λ 5.4 (NeuralFoil) | `screening/00_screen.py`, `screening/plot_screen.py` | `config.yaml` (design and BEM) | `screening/results/` |
+| XFOIL check of the top 5 at λ 5.4, final blade (mh114) | `run_all.bat` (steps 01 to 05) | `config.yaml` (top 5 read from `screening/results/screen_ranking.csv`) | `results_lambda54/` |
 | Earlier λ sweep 5.0 to 6.5, 20 airfoils (best: e68 at λ 6.5) | `run_sweep.bat` (steps 01 to 05) | `config_sweep.yaml` | `results/` |
 | Code verification against Assignments 3 and 4 | `validation/validate_goe227.py` | `config.yaml` (rotor only) | `validation/output/` |
 | QBlade cross-check | QBlade CE 2.0.9.7, by hand | blade and polars from `results_lambda54/report/winner/` | `qblade/` |
@@ -45,11 +67,7 @@ py -3.12 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-If activation is blocked, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. The screening step needs two more packages:
-
-```powershell
-.\.venv\Scripts\python -m pip install aerosandbox==4.2.10 neuralfoil==0.3.3
-```
+If activation is blocked, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. `requirements.txt` pins every package, also the indirect ones, to the versions the results were made with (AeroSandbox and NeuralFoil included). For `explore.ipynb`, also install `requirements-notebook.txt`. `reproduce.bat` does sections 1 to 3 for you.
 
 ## 3. XFOIL
 
@@ -67,17 +85,21 @@ Every XFOIL call has a timeout (`xfoil.timeout_s`), so one hanging case cannot s
 |---|---|---|---|
 | λ 5.4 study (final blade) | double click `run_all.bat` | `config.yaml` | `results_lambda54/` |
 | Earlier λ sweep | double click `run_sweep.bat` | `config_sweep.yaml` | `results/` |
-| Screening (676 list) | `.venv\Scripts\python screening\00_screen.py` then `screening\plot_screen.py` | `screening/foil_list_676.txt` + `config.yaml` | `screening/results/` |
+| Everything, from the database | double click `reproduce.bat` | all of the above | all of the above |
+| Candidate list | `.venv\Scripts\python screening\00_build_list.py` | top of the script | `screening/results/candidates_uiuc.txt` |
+| Screening | `.venv\Scripts\python screening\00_screen.py` then `screening\plot_screen.py` | the candidate list + `config.yaml` | `screening/results/` |
 | Screening (your own list) | `.venv\Scripts\python screening\00_screen.py --list my_list.txt --out screening\results_my_list` | see `screening/README.md` | the `--out` folder |
 | Code check | `.venv\Scripts\python validation\validate_goe227.py` | | `validation/output/` |
 
-Both batch files run the same five scripts. `run_sweep.bat` only sets the environment variable `WIND_BLADE_CONFIG=config_sweep.yaml` first; `bem.load_config()` reads that file instead of `config.yaml`. To run a single step of the sweep by hand:
+All three batch files call `reproduce.py`, which sets up the environment the same way each time: `run_all.bat` is `reproduce.py --xfoil-only` (steps 01 to 05 with the top 5 from the screening ranking already in `screening/results/`), `run_sweep.bat` is `reproduce.py --sweep-only`. The sweep sets the environment variable `WIND_BLADE_CONFIG=config_sweep.yaml`, so `bem.load_config()` reads that file instead of `config.yaml`. To run a single step of the sweep by hand:
 
 ```powershell
 $env:WIND_BLADE_CONFIG = "config_sweep.yaml"
 .\.venv\Scripts\python.exe 03_performance.py
 Remove-Item Env:WIND_BLADE_CONFIG
 ```
+
+**Where the virtual environment is.** Normally `.venv` in this folder. On Windows, when the folder path is long (more than about 90 characters, for example deep inside OneDrive) and long paths are not enabled, some AeroSandbox files would pass Windows' 260 character limit. `reproduce.py` then makes the environment in `%LOCALAPPDATA%\gruppe12_vindturbin\venv-<id>` and prints the path at the start. Use that `python.exe` instead of `.venv\Scripts\python` in the commands above, or clone the repository to a shorter path such as `C:\code\gruppe12_vindturbin`.
 
 In VS Code, *Run and Debug* has one entry per step (`.vscode/launch.json`); these use `config.yaml`.
 
@@ -136,6 +158,8 @@ Each step reads the CSV output of the step before, so any step can be rerun on i
 gruppe12_vindturbin/
   config.yaml            λ 5.4 study: all parameters, airfoil list, path to xfoil.exe
   config_sweep.yaml      earlier λ sweep (same file, lines marked SWEEP differ)
+  reproduce.bat / .py    everything: setup, candidate list, screening, XFOIL study, check
+  expected_results.yaml  the numbers in the report, checked at the end of reproduce.py
   run_all.bat            λ 5.4 study, steps 01 to 05
   run_sweep.bat          λ sweep, steps 01 to 05
   01_polars.py  02_design.py  03_performance.py  04_report.py  05_plots.py
@@ -143,7 +167,7 @@ gruppe12_vindturbin/
   xfoil_runner.py        shared XFOIL functions (geometry, batch runs, cache)
   explore.ipynb
   airfoils/              original .dat files + SOURCES.csv (download URL for every file)
-  screening/             NeuralFoil screening of the 676 candidates (own README)
+  screening/             candidate list and NeuralFoil screening (own README)
   validation/            QBlade reference data from A3/A4 and the check script
   results_lambda54/      results of the λ 5.4 study
   results/               results of the λ sweep

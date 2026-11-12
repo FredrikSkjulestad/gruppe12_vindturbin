@@ -23,7 +23,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent
 
 
-def load_config(path: Path | None = None) -> dict:
+def load_config(path: Path | None = None, resolve_airfoils: bool = True) -> dict:
     """Read config.yaml, or the file named in the environment variable WIND_BLADE_CONFIG
     (set by run_sweep.bat to config_sweep.yaml). Relative paths are taken from this folder."""
     if path is None:
@@ -32,7 +32,32 @@ def load_config(path: Path | None = None) -> dict:
     cfg = yaml.safe_load(open(path, encoding="utf-8"))
     for k, v in cfg["paths"].items():
         cfg["paths"][k] = (ROOT / v) if not Path(v).is_absolute() else Path(v)
+    if os.environ.get("XFOIL_EXE"):                      # e.g. xfoil on Linux/Mac, set by reproduce.py
+        cfg["paths"]["xfoil"] = Path(os.environ["XFOIL_EXE"])
+    if resolve_airfoils and isinstance(cfg["airfoils"], dict):   # airfoils: {from_screening: <csv>, top: N}
+        cfg["airfoils"] = airfoils_from_screening(cfg)
     return cfg
+
+
+def airfoils_from_screening(cfg: dict) -> list[str]:
+    """The top N airfoils of the NeuralFoil screening (screening/results/screen_ranking.csv).
+    A missing .dat file in the airfoils folder is written from the AeroSandbox UIUC coordinates
+    (the same coordinates the screening used)."""
+    spec = cfg["airfoils"]
+    ranking = ROOT / spec["from_screening"]
+    if not ranking.exists():
+        raise SystemExit(f"{ranking} not found. Run the screening first (screening/00_build_list.py, then "
+                         f"screening/00_screen.py), or run reproduce.bat to do everything.")
+    rank = pd.read_csv(ranking).sort_values("rank")
+    names = [str(n) for n in rank.airfoil.head(int(spec["top"]))]
+    for n in names:
+        dat = cfg["paths"]["airfoils"] / f"{n}.dat"
+        if not dat.exists():
+            import aerosandbox as asb
+            xy = asb.Airfoil(n).coordinates
+            dat.write_text(n + "\n" + "".join(f" {x:.6f}  {y:.6f}\n" for x, y in xy), encoding="utf-8")
+            print(f"wrote {dat.name} from the AeroSandbox UIUC coordinates")
+    return names
 
 
 # =================================================================== polars
